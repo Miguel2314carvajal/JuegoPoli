@@ -135,44 +135,43 @@ public class Main extends ApplicationAdapter {
         
         // Renderizar mensaje de victoria
         if (gameWon) {
-            // Fondo semi-transparente para todo el laberinto
-            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-            shapeRenderer.setColor(0, 0, 0, 0.7f);
-            shapeRenderer.rect(0, 0, camera.viewportWidth, camera.viewportHeight);
-            shapeRenderer.end();
-            
             batch.begin();
-            // Mensaje de victoria
+            // Mensaje de victoria con efecto de brillo
             font.getData().setScale(2.0f);
             String message = "¡FELICIDADES, TE TITULASTE!";
             layout.setText(font, message);
             float messageX = camera.viewportWidth/2 - layout.width/2;
             float messageY = camera.viewportHeight/2 + 30;
+            
+            // Dibuja el texto con un efecto de sombra suave
+            font.setColor(0.2f, 0.2f, 0.2f, 0.5f);
+            font.draw(batch, message, messageX + 2, messageY - 2);
+            font.setColor(1, 0.8f, 0, 1); // Color dorado para el texto principal
             font.draw(batch, message, messageX, messageY);
             
             // Texto para reiniciar según plataforma
+            font.getData().setScale(1.0f);
             if (Gdx.app.getType() == Application.ApplicationType.Android) {
-                font.getData().setScale(1.0f);
                 String resetText = "Toca aquí para jugar de nuevo";
                 layout.setText(font, resetText);
                 float resetX = camera.viewportWidth/2 - layout.width/2;
+                font.setColor(1, 1, 1, 0.9f);
                 font.draw(batch, resetText, resetX, messageY - 40);
             } else {
-                font.getData().setScale(1.0f);
                 String resetText = "Presiona ESPACIO para jugar de nuevo";
                 layout.setText(font, resetText);
                 float resetX = camera.viewportWidth/2 - layout.width/2;
+                font.setColor(1, 1, 1, 0.9f);
                 font.draw(batch, resetText, resetX, messageY - 40);
             }
             font.getData().setScale(1f);
             batch.end();
             
-            // Verificar reinicio del juego
+            // Mantener la lógica de reinicio del juego
             if (Gdx.app.getType() == Application.ApplicationType.Android && Gdx.input.justTouched()) {
                 float touchY = camera.viewportHeight - Gdx.input.getY() * (camera.viewportHeight / Gdx.graphics.getHeight());
                 float touchX = Gdx.input.getX() * (camera.viewportWidth / Gdx.graphics.getWidth());
                 
-                // Área de toque más grande para reiniciar
                 if (touchY >= messageY - 60 && touchY <= messageY - 20 &&
                     touchX >= camera.viewportWidth/2 - 100 && touchX <= camera.viewportWidth/2 + 100) {
                     resetGame();
