@@ -1,35 +1,58 @@
-# JuegoPoli
+# 🎓 JuegoPoli
 
-A [libGDX](https://libgdx.com/) project generated with [gdx-liftoff](https://github.com/libgdx/gdx-liftoff).
+## 👥 Integrantes
+- **Miguel Carvajal**  
+- **Shamyr Quishpe**  
+- **Freddy Villavicencio**  
+- **Mónica Jaña** 
 
-This project was generated with a template including simple application launchers and an `ApplicationAdapter` extension that draws libGDX logo.
+## 📖 Descripción
+En este juego se debe pasar un desafiante laberinto donde se controla a un 🦉 **búho**, que es el símbolo representativo de la **Escuela Politécnica Nacional (EPN)**.  
+Su misión es recolectar **todas las estrellas** antes de obtener el 📚 **libro que hace referencia al título universitario**.  
+Una vez que el búho recoja el libro, el juego mostrará un mensaje de **felicitaciones por la titulación** y permitirá **reiniciar la partida**.
 
-## Platforms
+## ✨ Características
+- 🎮 **Juego en 2D** con un laberinto desafiante.
+- 🖥️📱 **Compatible con PC y dispositivos móviles**.
+- 🎯 **Objetivo principal**: recolectar todas las estrellas antes del libro.
+- 🕹️ **Controles adaptados**: teclado en PC y botones en pantalla en móviles.
+- 🎉 **Mensaje de felicitaciones** al completar la misión.
+- 🔄 **Opción de reiniciar** tras finalizar la partida.
+- 🎨 **Diseño atractivo** inspirado en la EPN.
 
-- `core`: Main module with the application logic shared by all platforms.
-- `lwjgl3`: Primary desktop platform using LWJGL3; was called 'desktop' in older docs.
-- `android`: Android mobile platform. Needs Android SDK.
+## 🎮 Controles
 
-## Gradle
+### 🖥️ En PC
+- **Movimiento**: Flechas del teclado (⬆️⬇️⬅️➡️).
+- **Reiniciar partida**: Presionar **ESPACIO** tras finalizar.
 
-This project uses [Gradle](https://gradle.org/) to manage dependencies.
-The Gradle wrapper was included, so you can run Gradle tasks using `gradlew.bat` or `./gradlew` commands.
-Useful Gradle tasks and flags:
+### 📱 En Dispositivos Móviles
+- **Movimiento**: Controles en pantalla con botones direccionales.
+- **Reiniciar partida**: Tocar el botón **"Toque aquí para jugar de nuevo"** tras finalizar.
 
-- `--continue`: when using this flag, errors will not stop the tasks from running.
-- `--daemon`: thanks to this flag, Gradle daemon will be used to run chosen tasks.
-- `--offline`: when using this flag, cached dependency archives will be used.
-- `--refresh-dependencies`: this flag forces validation of all dependencies. Useful for snapshot versions.
-- `android:lint`: performs Android project validation.
-- `build`: builds sources and archives of every project.
-- `cleanEclipse`: removes Eclipse project data.
-- `cleanIdea`: removes IntelliJ project data.
-- `clean`: removes `build` folders, which store compiled classes and built archives.
-- `eclipse`: generates Eclipse project data.
-- `idea`: generates IntelliJ project data.
-- `lwjgl3:jar`: builds application's runnable jar, which can be found at `lwjgl3/build/libs`.
-- `lwjgl3:run`: starts the application.
-- `test`: runs unit tests (if any).
+## 🛠️ Tecnologías Utilizadas
+- 🔹 **Android Studio**: Entorno de desarrollo principal.
+- 🔹 **LibGDX**: Framework para el desarrollo del juego.
+- 🎭 **Sprites personalizados**: Diseñados para representar la temática de la EPN.
 
-Note that most tasks that are not specific to a single project can be run with `name:` prefix, where the `name` should be replaced with the ID of a specific project.
-For example, `core:clean` removes `build` folder only from the `core` project.
+## 🚀 Instalación y Ejecución
+
+### 🖥️ Para PC:
+1. 📥 Descargar e instalar **Java** y las librerías necesarias de **LibGDX**.
+2. 🖥️ Clonar el repositorio del proyecto.
+3. ▶️ Ejecutar el juego desde **Android Studio** o como aplicación independiente en PC.
+
+### 📱 Para Dispositivos Móviles:
+1. 📲 Instalar la aplicación en formato **.apk** en el dispositivo Android.
+2. ▶️ Abrir el juego y comenzar la partida.
+
+## 🖼️ Capturas y Video (Movil)
+
+![image](https://github.com/user-attachments/assets/6fed5c3b-e33c-47fb-9db7-9a299bb84838)
+![image](https://github.com/user-attachments/assets/00eb9a17-0e6f-4492-989f-727e4340be66)
+https://github.com/user-attachments/assets/d690479e-57be-4591-b154-edf3c7a8bb60
+
+
+
+## 🏆 Créditos
+Desarrollado por el equipo mencionado anteriormente, como parte del proyecto en la **Escuela Politécnica Nacional**.
