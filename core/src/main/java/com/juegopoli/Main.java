@@ -37,15 +37,15 @@ public class Main extends ApplicationAdapter {
         shapeRenderer = new ShapeRenderer();
         camera = new OrthographicCamera();
         camera.setToOrtho(false, 480, 384);
-        
+
         platforms = new Array<>();
         stars = new Array<>();
         font = new BitmapFont();
         layout = new GlyphLayout();
-        
+
         Position startPosition = findStartPosition();
         player = new Player(startPosition.x, startPosition.y, camera.viewportWidth, camera.viewportHeight);
-        
+
         createMaze();
         generateStars();
         book = new Book(13 * TILE_SIZE, 10 * TILE_SIZE);
@@ -62,17 +62,17 @@ public class Main extends ApplicationAdapter {
         // Limpiar y regenerar el laberinto
         platforms.clear();
         createMaze();
-        
+
         // Reiniciar jugador
         Position startPosition = findStartPosition();
         player = new Player(startPosition.x, startPosition.y, camera.viewportWidth, camera.viewportHeight);
-        
+
         // Regenerar estrellas
         generateStars();
-        
+
         // Reposicionar libro
         book = new Book(13 * TILE_SIZE, 10 * TILE_SIZE);
-        
+
         // Reiniciar estado del juego
         gameWon = false;
     }
@@ -93,10 +93,10 @@ public class Main extends ApplicationAdapter {
     public void render() {
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-        
+
         // Actualizar jugador
         player.update(Gdx.graphics.getDeltaTime(), platforms);
-        
+
         // Verificar colisiones con estrellas
         for (Star star : stars) {
             if (!star.isCollected() && player.checkStarCollision(star)) {
@@ -104,15 +104,15 @@ public class Main extends ApplicationAdapter {
                 player.collectStar();
             }
         }
-        
+
         // Verificar victoria
         if (player.getStars() == 5 && player.checkBookCollision(book)) {
             gameWon = true;
         }
-        
+
         camera.update();
         batch.setProjectionMatrix(camera.combined);
-        
+
         batch.begin();
         // Renderizar elementos del juego
         for (Platform platform : platforms) {
@@ -123,16 +123,16 @@ public class Main extends ApplicationAdapter {
         }
         player.render(batch);
         book.render(batch);
-        
+
         // Mostrar textos
         font.draw(batch, "Estrellas: " + player.getStars(), 10, 470);
         font.draw(batch, "¡Recolecta todas las estrellas", 400, 470);
         font.draw(batch, "para poder titularte!", 400, 450);
         batch.end();
-        
+
         // Renderizar controles móviles
         renderMobileControls();
-        
+
         // Renderizar mensaje de victoria
         if (gameWon) {
             batch.begin();
@@ -142,13 +142,13 @@ public class Main extends ApplicationAdapter {
             layout.setText(font, message);
             float messageX = camera.viewportWidth/2 - layout.width/2;
             float messageY = camera.viewportHeight/2 + 30;
-            
+
             // Dibuja el texto con un efecto de sombra suave
             font.setColor(0.2f, 0.2f, 0.2f, 0.5f);
             font.draw(batch, message, messageX + 2, messageY - 2);
             font.setColor(1, 0.8f, 0, 1); // Color dorado para el texto principal
             font.draw(batch, message, messageX, messageY);
-            
+
             // Texto para reiniciar según plataforma
             font.getData().setScale(1.0f);
             if (Gdx.app.getType() == Application.ApplicationType.Android) {
@@ -166,12 +166,12 @@ public class Main extends ApplicationAdapter {
             }
             font.getData().setScale(1f);
             batch.end();
-            
+
             // Mantener la lógica de reinicio del juego
             if (Gdx.app.getType() == Application.ApplicationType.Android && Gdx.input.justTouched()) {
                 float touchY = camera.viewportHeight - Gdx.input.getY() * (camera.viewportHeight / Gdx.graphics.getHeight());
                 float touchX = Gdx.input.getX() * (camera.viewportWidth / Gdx.graphics.getWidth());
-                
+
                 if (touchY >= messageY - 60 && touchY <= messageY - 20 &&
                     touchX >= camera.viewportWidth/2 - 100 && touchX <= camera.viewportWidth/2 + 100) {
                     resetGame();
@@ -196,7 +196,7 @@ public class Main extends ApplicationAdapter {
 
     private void createMaze() {
         platforms.clear();
-        
+
         // Matriz del laberinto actualizada para coincidir con la imagen
         int[][] mazeLayout = {
             {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
@@ -212,7 +212,7 @@ public class Main extends ApplicationAdapter {
             {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
             {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1}
         };
-        
+
         // Crear las plataformas del laberinto
         for(int y = 0; y < mazeLayout.length; y++) {
             for(int x = 0; x < mazeLayout[y].length; x++) {
@@ -249,49 +249,7 @@ public class Main extends ApplicationAdapter {
         stars.add(new Star(TILE_SIZE * 10, TILE_SIZE * 8));    // Quinta estrella
     }
 
-    private void renderMobileControls() {
-        if (Gdx.app.getType() == Application.ApplicationType.Android) {
-            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-            
-            float screenWidth = Gdx.graphics.getWidth();
-            float screenHeight = Gdx.graphics.getHeight();
-            float padSize = screenHeight * 0.3f;
-            float padding = screenHeight * 0.1f;
-            
-            // Color semi-transparente para el pad
-            shapeRenderer.setColor(1, 1, 1, 0.3f);
-            
-            // Círculo central del pad direccional
-            float padX = screenWidth - padding - padSize/2;
-            float padY = padding + padSize/2;
-            float buttonSize = padSize/3;
-            
-            // Botón central (más grande y transparente)
-            shapeRenderer.setColor(1, 1, 1, 0.1f);
-            shapeRenderer.circle(padX, padY, buttonSize);
-            
-            // Botones direccionales
-            shapeRenderer.setColor(1, 1, 1, 0.3f);
-            shapeRenderer.circle(padX, padY + buttonSize, buttonSize/2);      // Arriba
-            shapeRenderer.circle(padX, padY - buttonSize, buttonSize/2);      // Abajo
-            shapeRenderer.circle(padX - buttonSize, padY, buttonSize/2);      // Izquierda
-            shapeRenderer.circle(padX + buttonSize, padY, buttonSize/2);      // Derecha
-            
-            shapeRenderer.end();
-            
-            // Dibujar flechas
-            shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-            shapeRenderer.setColor(1, 1, 1, 0.5f);
-            float arrowSize = buttonSize * 0.4f;
-            
-            drawArrow(padX, padY + buttonSize, arrowSize, "up");
-            drawArrow(padX, padY - buttonSize, arrowSize, "down");
-            drawArrow(padX - buttonSize, padY, arrowSize, "left");
-            drawArrow(padX + buttonSize, padY, arrowSize, "right");
-            
-            shapeRenderer.end();
-        }
-    }
+
 
     private void drawArrow(float x, float y, float size, String direction) {
         switch(direction) {
