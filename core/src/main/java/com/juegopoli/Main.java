@@ -249,7 +249,49 @@ public class Main extends ApplicationAdapter {
         stars.add(new Star(TILE_SIZE * 10, TILE_SIZE * 8));    // Quinta estrella
     }
 
+    private void renderMobileControls() {
+        if (Gdx.app.getType() == Application.ApplicationType.Android) {
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 
+            float screenWidth = Gdx.graphics.getWidth();
+            float screenHeight = Gdx.graphics.getHeight();
+            float padSize = screenHeight * 0.3f;
+            float padding = screenHeight * 0.1f;
+
+            // Color semi-transparente para el pad
+            shapeRenderer.setColor(1, 1, 1, 0.3f);
+
+            // Círculo central del pad direccional
+            float padX = screenWidth - padding - padSize/2;
+            float padY = padding + padSize/2;
+            float buttonSize = padSize/3;
+
+            // Botón central (más grande y transparente)
+            shapeRenderer.setColor(1, 1, 1, 0.1f);
+            shapeRenderer.circle(padX, padY, buttonSize);
+
+            // Botones direccionales
+            shapeRenderer.setColor(1, 1, 1, 0.3f);
+            shapeRenderer.circle(padX, padY + buttonSize, buttonSize/2);      // Arriba
+            shapeRenderer.circle(padX, padY - buttonSize, buttonSize/2);      // Abajo
+            shapeRenderer.circle(padX - buttonSize, padY, buttonSize/2);      // Izquierda
+            shapeRenderer.circle(padX + buttonSize, padY, buttonSize/2);      // Derecha
+
+            shapeRenderer.end();
+
+            // Dibujar flechas
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+            shapeRenderer.setColor(1, 1, 1, 0.5f);
+            float arrowSize = buttonSize * 0.4f;
+
+            drawArrow(padX, padY + buttonSize, arrowSize, "up");
+            drawArrow(padX, padY - buttonSize, arrowSize, "down");
+            drawArrow(padX - buttonSize, padY, arrowSize, "left");
+            drawArrow(padX + buttonSize, padY, arrowSize, "right");
+
+            shapeRenderer.end();
+        }
+    }
 
     private void drawArrow(float x, float y, float size, String direction) {
         switch(direction) {
