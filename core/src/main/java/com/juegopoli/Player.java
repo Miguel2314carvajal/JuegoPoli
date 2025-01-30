@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.Application;
 
 public class Player {
     private static final float MOVEMENT_SPEED = 150;
@@ -16,11 +17,15 @@ public class Player {
     private float y;
     private Rectangle bounds;
     private int stars;
+    private float viewportWidth;
+    private float viewportHeight;
 
-    public Player(float x, float y) {
+    public Player(float x, float y, float viewportWidth, float viewportHeight) {
         this.x = x;
         this.y = y;
         this.stars = 0;
+        this.viewportWidth = viewportWidth;
+        this.viewportHeight = viewportHeight;
         texture = new Texture(Gdx.files.internal("owl.png"));
         bounds = new Rectangle(x + 4, y + 4, PLAYER_SIZE - 8, PLAYER_SIZE - 8);
     }
@@ -30,6 +35,7 @@ public class Player {
         float oldY = y;
         boolean moved = false;
 
+        // Controles PC
         if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
             x -= MOVEMENT_SPEED * deltaTime;
             moved = true;
@@ -47,25 +53,34 @@ public class Player {
             moved = true;
         }
 
-        if (Gdx.input.isTouched()) {
+        // Controles móviles
+        if (Gdx.app.getType() == Application.ApplicationType.Android && Gdx.input.isTouched()) {
+            float screenWidth = Gdx.graphics.getWidth();
+            float screenHeight = Gdx.graphics.getHeight();
+            float padSize = screenHeight * 0.3f;
+            float padding = screenHeight * 0.1f;
+            float padX = screenWidth - padding - padSize/2;
+            float padY = padding + padSize/2;
+            float buttonSize = padSize/3;
+            
             float touchX = Gdx.input.getX();
-            float touchY = Gdx.input.getY();
-            float centerX = Gdx.graphics.getWidth() / 2f;
-            float centerY = Gdx.graphics.getHeight() / 2f;
+            float touchY = screenHeight - Gdx.input.getY();
 
-            if (touchX < centerX - 50) {
-                x -= MOVEMENT_SPEED * deltaTime;
-                moved = true;
-            } else if (touchX > centerX + 50) {
-                x += MOVEMENT_SPEED * deltaTime;
+            // Verificar toques en cada dirección
+            if (checkTouchCircle(touchX, touchY, padX, padY + buttonSize, buttonSize/2)) {
+                y += MOVEMENT_SPEED * deltaTime; // Arriba
                 moved = true;
             }
-
-            if (touchY < centerY - 50) {
-                y += MOVEMENT_SPEED * deltaTime;
+            if (checkTouchCircle(touchX, touchY, padX, padY - buttonSize, buttonSize/2)) {
+                y -= MOVEMENT_SPEED * deltaTime; // Abajo
                 moved = true;
-            } else if (touchY > centerY + 50) {
-                y -= MOVEMENT_SPEED * deltaTime;
+            }
+            if (checkTouchCircle(touchX, touchY, padX - buttonSize, padY, buttonSize/2)) {
+                x -= MOVEMENT_SPEED * deltaTime; // Izquierda
+                moved = true;
+            }
+            if (checkTouchCircle(touchX, touchY, padX + buttonSize, padY, buttonSize/2)) {
+                x += MOVEMENT_SPEED * deltaTime; // Derecha
                 moved = true;
             }
         }
@@ -78,6 +93,12 @@ public class Player {
                 bounds.setPosition(x + 4, y + 4);
             }
         }
+    }
+
+    private boolean checkTouchCircle(float touchX, float touchY, float circleX, float circleY, float radius) {
+        float dx = touchX - circleX;
+        float dy = touchY - circleY;
+        return dx * dx + dy * dy <= radius * radius;
     }
 
     private boolean checkCollision(Array<Platform> platforms) {

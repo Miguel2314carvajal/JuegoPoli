@@ -12,6 +12,7 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.Application;
+import com.badlogic.gdx.graphics.Texture;
 
 /** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
 public class Main extends ApplicationAdapter {
@@ -28,6 +29,7 @@ public class Main extends ApplicationAdapter {
     private static final int TILE_SIZE = 32;
     private static final int MAZE_WIDTH = 15;
     private static final int MAZE_HEIGHT = 12;
+    private Texture background;
 
     @Override
     public void create() {
@@ -41,12 +43,13 @@ public class Main extends ApplicationAdapter {
         font = new BitmapFont();
         layout = new GlyphLayout();
         
-        // Crear el jugador en la posición correcta
-        player = new Player(TILE_SIZE + 4, TILE_SIZE + 4);
+        Position startPosition = findStartPosition();
+        player = new Player(startPosition.x, startPosition.y, camera.viewportWidth, camera.viewportHeight);
         
         createMaze();
         generateStars();
         book = new Book(13 * TILE_SIZE, 10 * TILE_SIZE);
+        background = new Texture("background.png");
     }
 
     @Override
@@ -56,24 +59,19 @@ public class Main extends ApplicationAdapter {
     }
 
     private void resetGame() {
-        // Generar nuevo laberinto
+        // Limpiar y regenerar el laberinto
+        platforms.clear();
         createMaze();
         
-        // Encontrar posiciones de inicio y fin
-        Position start = findStartPosition();
-        Position end = findEndPosition();
+        // Reiniciar jugador
+        Position startPosition = findStartPosition();
+        player = new Player(startPosition.x, startPosition.y, camera.viewportWidth, camera.viewportHeight);
         
-        // Crear jugador y libro
-        player = new Player(start.x, start.y);
-        book = new Book(end.x, end.y);
-        
-        // Limpiar y regenerar estrellas
-        if (stars != null) {
-            stars.clear();
-        } else {
-            stars = new Array<>();
-        }
+        // Regenerar estrellas
         generateStars();
+        
+        // Reposicionar libro
+        book = new Book(13 * TILE_SIZE, 10 * TILE_SIZE);
         
         // Reiniciar estado del juego
         gameWon = false;
@@ -96,39 +94,35 @@ public class Main extends ApplicationAdapter {
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         
-        camera.update();
-        batch.setProjectionMatrix(camera.combined);
-        
+        // Actualizar jugador
         player.update(Gdx.graphics.getDeltaTime(), platforms);
         
-        // Verificar colisiones
-        for(Star star : stars) {
-            if (!star.isCollected() && player.getBounds().overlaps(star.getBounds())) {
+        // Verificar colisiones con estrellas
+        for (Star star : stars) {
+            if (!star.isCollected() && player.checkStarCollision(star)) {
                 star.collect();
                 player.collectStar();
             }
         }
         
-        if (!gameWon && player.getBounds().overlaps(book.getBounds()) && player.getStars() >= 5) {
+        // Verificar victoria
+        if (player.getStars() == 5 && player.checkBookCollision(book)) {
             gameWon = true;
         }
         
-        // Renderizar elementos del juego
+        camera.update();
+        batch.setProjectionMatrix(camera.combined);
+        
         batch.begin();
-        for(Platform platform : platforms) {
+        // Renderizar elementos del juego
+        for (Platform platform : platforms) {
             platform.render(batch);
         }
-        
-        for(Star star : stars) {
-            if (!star.isCollected()) {
-                star.render(batch);
-            }
+        for (Star star : stars) {
+            star.render(batch);
         }
-        
         player.render(batch);
-        if (!gameWon) {
-            book.render(batch);
-        }
+        book.render(batch);
         
         // Mostrar textos
         font.draw(batch, "Estrellas: " + player.getStars(), 10, 470);
@@ -136,26 +130,56 @@ public class Main extends ApplicationAdapter {
         font.draw(batch, "para poder titularte!", 400, 450);
         batch.end();
         
+        // Renderizar controles móviles
+        renderMobileControls();
+        
         // Renderizar mensaje de victoria
         if (gameWon) {
+            // Fondo semi-transparente para todo el laberinto
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
             shapeRenderer.setColor(0, 0, 0, 0.7f);
-            float messageX = 320 - layout.width/2;
-            float messageY = 240;
-            shapeRenderer.rect(messageX - 10, messageY - 30, 
-                             layout.width + 20, 60);
+            shapeRenderer.rect(0, 0, camera.viewportWidth, camera.viewportHeight);
             shapeRenderer.end();
             
             batch.begin();
-            font.getData().setScale(1.2f);
+            // Mensaje de victoria
+            font.getData().setScale(2.0f);
             String message = "¡FELICIDADES, TE TITULASTE!";
-            font.draw(batch, message, messageX, messageY + 10);
+            layout.setText(font, message);
+            float messageX = camera.viewportWidth/2 - layout.width/2;
+            float messageY = camera.viewportHeight/2 + 30;
+            font.draw(batch, message, messageX, messageY);
+            
+            // Texto para reiniciar según plataforma
+            if (Gdx.app.getType() == Application.ApplicationType.Android) {
+                font.getData().setScale(1.0f);
+                String resetText = "Toca aquí para jugar de nuevo";
+                layout.setText(font, resetText);
+                float resetX = camera.viewportWidth/2 - layout.width/2;
+                font.draw(batch, resetText, resetX, messageY - 40);
+            } else {
+                font.getData().setScale(1.0f);
+                String resetText = "Presiona ESPACIO para jugar de nuevo";
+                layout.setText(font, resetText);
+                float resetX = camera.viewportWidth/2 - layout.width/2;
+                font.draw(batch, resetText, resetX, messageY - 40);
+            }
             font.getData().setScale(1f);
             batch.end();
-        }
-        
-        if (Gdx.app.getType() == Application.ApplicationType.Android) {
-            renderMobileControls();
+            
+            // Verificar reinicio del juego
+            if (Gdx.app.getType() == Application.ApplicationType.Android && Gdx.input.justTouched()) {
+                float touchY = camera.viewportHeight - Gdx.input.getY() * (camera.viewportHeight / Gdx.graphics.getHeight());
+                float touchX = Gdx.input.getX() * (camera.viewportWidth / Gdx.graphics.getWidth());
+                
+                // Área de toque más grande para reiniciar
+                if (touchY >= messageY - 60 && touchY <= messageY - 20 &&
+                    touchX >= camera.viewportWidth/2 - 100 && touchX <= camera.viewportWidth/2 + 100) {
+                    resetGame();
+                }
+            } else if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+                resetGame();
+            }
         }
     }
 
@@ -168,6 +192,7 @@ public class Main extends ApplicationAdapter {
             platform.dispose();
         }
         font.dispose();
+        background.dispose();
     }
 
     private void createMaze() {
@@ -199,31 +224,106 @@ public class Main extends ApplicationAdapter {
         }
     }
 
+    private int[][] getMazeLayout() {
+        return new int[][] {
+            {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
+            {1,0,0,0,0,0,1,0,0,0,0,0,0,0,1},
+            {1,0,1,1,1,0,1,0,1,1,1,1,1,0,1},
+            {1,0,0,0,1,0,0,0,0,0,0,0,0,0,1},
+            {1,1,1,0,1,1,1,1,1,0,1,1,1,0,1},
+            {1,0,0,0,0,0,0,0,1,0,0,0,0,0,1},
+            {1,0,1,1,1,1,1,0,1,0,1,1,1,0,1},
+            {1,0,0,0,0,0,1,0,1,0,0,0,0,0,1},
+            {1,0,1,1,1,0,0,0,0,0,1,1,1,0,1},
+            {1,0,0,0,0,0,1,1,1,0,0,0,0,0,1},
+            {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1}
+        };
+    }
+
     private void generateStars() {
         stars.clear();
-        // Posiciones de estrellas basadas en el valor 2 en la matriz
-        stars.add(new Star(13 * TILE_SIZE + 4, 9 * TILE_SIZE + 4));  // Estrella superior
-        stars.add(new Star(7 * TILE_SIZE + 4, 8 * TILE_SIZE + 4));   // Estrella media alta
-        stars.add(new Star(1 * TILE_SIZE + 4, 6 * TILE_SIZE + 4));   // Estrella media
-        stars.add(new Star(11 * TILE_SIZE + 4, 5 * TILE_SIZE + 4));  // Estrella media baja
-        stars.add(new Star(9 * TILE_SIZE + 4, 3 * TILE_SIZE + 4));   // Estrella inferior
+        // Posiciones fijas en los caminos negros (espacios vacíos) del laberinto
+        stars.add(new Star(TILE_SIZE * 4, TILE_SIZE * 2));     // Primera estrella
+        stars.add(new Star(TILE_SIZE * 9, TILE_SIZE * 4));     // Segunda estrella
+        stars.add(new Star(TILE_SIZE * 6, TILE_SIZE * 6));     // Tercera estrella
+        stars.add(new Star(TILE_SIZE * 3, TILE_SIZE * 8));     // Cuarta estrella
+        stars.add(new Star(TILE_SIZE * 10, TILE_SIZE * 8));    // Quinta estrella
     }
 
     private void renderMobileControls() {
         if (Gdx.app.getType() == Application.ApplicationType.Android) {
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-            shapeRenderer.setColor(0.5f, 0.5f, 0.5f, 0.2f);
             
             float screenWidth = Gdx.graphics.getWidth();
             float screenHeight = Gdx.graphics.getHeight();
+            float padSize = screenHeight * 0.3f;
+            float padding = screenHeight * 0.1f;
             
-            // Dividir la pantalla en cuatro cuadrantes
-            shapeRenderer.rect(0, 0, screenWidth/2, screenHeight/2); // Abajo-izquierda
-            shapeRenderer.rect(screenWidth/2, 0, screenWidth/2, screenHeight/2); // Abajo-derecha
-            shapeRenderer.rect(0, screenHeight/2, screenWidth/2, screenHeight/2); // Arriba-izquierda
-            shapeRenderer.rect(screenWidth/2, screenHeight/2, screenWidth/2, screenHeight/2); // Arriba-derecha
+            // Color semi-transparente para el pad
+            shapeRenderer.setColor(1, 1, 1, 0.3f);
+            
+            // Círculo central del pad direccional
+            float padX = screenWidth - padding - padSize/2;
+            float padY = padding + padSize/2;
+            float buttonSize = padSize/3;
+            
+            // Botón central (más grande y transparente)
+            shapeRenderer.setColor(1, 1, 1, 0.1f);
+            shapeRenderer.circle(padX, padY, buttonSize);
+            
+            // Botones direccionales
+            shapeRenderer.setColor(1, 1, 1, 0.3f);
+            shapeRenderer.circle(padX, padY + buttonSize, buttonSize/2);      // Arriba
+            shapeRenderer.circle(padX, padY - buttonSize, buttonSize/2);      // Abajo
+            shapeRenderer.circle(padX - buttonSize, padY, buttonSize/2);      // Izquierda
+            shapeRenderer.circle(padX + buttonSize, padY, buttonSize/2);      // Derecha
             
             shapeRenderer.end();
+            
+            // Dibujar flechas
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+            shapeRenderer.setColor(1, 1, 1, 0.5f);
+            float arrowSize = buttonSize * 0.4f;
+            
+            drawArrow(padX, padY + buttonSize, arrowSize, "up");
+            drawArrow(padX, padY - buttonSize, arrowSize, "down");
+            drawArrow(padX - buttonSize, padY, arrowSize, "left");
+            drawArrow(padX + buttonSize, padY, arrowSize, "right");
+            
+            shapeRenderer.end();
+        }
+    }
+
+    private void drawArrow(float x, float y, float size, String direction) {
+        switch(direction) {
+            case "up":
+                shapeRenderer.line(x, y - size/2, x, y + size/2);
+                shapeRenderer.line(x, y + size/2, x - size/4, y + size/4);
+                shapeRenderer.line(x, y + size/2, x + size/4, y + size/4);
+                break;
+            case "down":
+                shapeRenderer.line(x, y + size/2, x, y - size/2);
+                shapeRenderer.line(x, y - size/2, x - size/4, y - size/4);
+                shapeRenderer.line(x, y - size/2, x + size/4, y - size/4);
+                break;
+            case "left":
+                shapeRenderer.line(x + size/2, y, x - size/2, y);
+                shapeRenderer.line(x - size/2, y, x - size/4, y + size/4);
+                shapeRenderer.line(x - size/2, y, x - size/4, y - size/4);
+                break;
+            case "right":
+                shapeRenderer.line(x - size/2, y, x + size/2, y);
+                shapeRenderer.line(x + size/2, y, x + size/4, y + size/4);
+                shapeRenderer.line(x + size/2, y, x + size/4, y - size/4);
+                break;
+        }
+    }
+
+    private class Position {
+        float x, y;
+        Position(float x, float y) {
+            this.x = x;
+            this.y = y;
         }
     }
 }
