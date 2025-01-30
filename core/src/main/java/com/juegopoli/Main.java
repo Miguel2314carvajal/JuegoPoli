@@ -10,6 +10,8 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
+import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.Application;
 
 /** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
 public class Main extends ApplicationAdapter {
@@ -18,156 +20,143 @@ public class Main extends ApplicationAdapter {
     private OrthographicCamera camera;
     private Player player;
     private Array<Platform> platforms;
-    private Coin coin;
-    private boolean gameWon = false;
+    private Array<Star> stars;
+    private Book book;
     private BitmapFont font;
+    private GlyphLayout layout;
+    private boolean gameWon = false;
     private static final int TILE_SIZE = 32;
-    private Position[] startEndPositions;
-    private int[][] currentMaze;
-    private static final int MAZE_WIDTH = 20;
-    private static final int MAZE_HEIGHT = 15;
-    private GlyphLayout layout = new GlyphLayout();
-
-    private class Position {
-        float x, y;
-        Position(float x, float y) {
-            this.x = x;
-            this.y = y;
-        }
-    }
+    private static final int MAZE_WIDTH = 15;
+    private static final int MAZE_HEIGHT = 12;
 
     @Override
     public void create() {
         batch = new SpriteBatch();
         shapeRenderer = new ShapeRenderer();
         camera = new OrthographicCamera();
-        camera.setToOrtho(false, 640, 480);
+        camera.setToOrtho(false, 480, 384);
         
         platforms = new Array<>();
-        generateRandomMaze();
-        createMaze();
-        startEndPositions = findStartEndPositions();
-        resetGame();
-        
+        stars = new Array<>();
         font = new BitmapFont();
-        font.getData().setScale(2);
+        layout = new GlyphLayout();
+        
+        // Crear el jugador en la posición correcta
+        player = new Player(TILE_SIZE + 4, TILE_SIZE + 4);
+        
+        createMaze();
+        generateStars();
+        book = new Book(13 * TILE_SIZE, 10 * TILE_SIZE);
+    }
+
+    @Override
+    public void resize(int width, int height) {
+        camera.setToOrtho(false, 640, 480);
+        camera.update();
     }
 
     private void resetGame() {
-        generateRandomMaze();
+        // Generar nuevo laberinto
         createMaze();
-        startEndPositions = findStartEndPositions();
-        Position start = startEndPositions[0];
-        Position end = startEndPositions[1];
+        
+        // Encontrar posiciones de inicio y fin
+        Position start = findStartPosition();
+        Position end = findEndPosition();
+        
+        // Crear jugador y libro
         player = new Player(start.x, start.y);
-        coin = new Coin(end.x, end.y);
+        book = new Book(end.x, end.y);
+        
+        // Limpiar y regenerar estrellas
+        if (stars != null) {
+            stars.clear();
+        } else {
+            stars = new Array<>();
+        }
+        generateStars();
+        
+        // Reiniciar estado del juego
         gameWon = false;
     }
 
-    private Position[] findStartEndPositions() {
-        Array<Position> validPositions = new Array<>();
-        
-        for(int row = 0; row < currentMaze.length; row++) {
-            for(int col = 0; col < currentMaze[row].length; col++) {
-                if(currentMaze[row][col] == 0) {
-                    validPositions.add(new Position(
-                        col * TILE_SIZE,
-                        (currentMaze.length - 1 - row) * TILE_SIZE
-                    ));
-                }
-            }
-        }
-
-        // Elegir dos posiciones opuestas
-        Position start = validPositions.first();
-        Position end = validPositions.get(validPositions.size - 1);
-        float maxDistance = 0;
-
-        for(int i = 0; i < validPositions.size; i++) {
-            for(int j = i + 1; j < validPositions.size; j++) {
-                Position p1 = validPositions.get(i);
-                Position p2 = validPositions.get(j);
-                float distance = distance(p1, p2);
-                
-                if(distance > maxDistance) {
-                    maxDistance = distance;
-                    start = p1;
-                    end = p2;
-                }
-            }
-        }
-
-        return new Position[]{start, end};
+    private Position findStartPosition() {
+        // Implementa la lógica para encontrar la posición inicial del laberinto
+        // Esto puede ser una posición específica o una posición aleatoria
+        return new Position(TILE_SIZE, TILE_SIZE); // Placeholder, actual implementación necesaria
     }
 
-    private float distance(Position p1, Position p2) {
-        float dx = p1.x - p2.x;
-        float dy = p1.y - p2.y;
-        return (float)Math.sqrt(dx * dx + dy * dy);
+    private Position findEndPosition() {
+        // Implementa la lógica para encontrar la posición final del laberinto
+        // Esto puede ser una posición específica o una posición aleatoria
+        return new Position(13 * TILE_SIZE, 10 * TILE_SIZE); // Placeholder, actual implementación necesaria
     }
 
     @Override
     public void render() {
-        Gdx.gl.glClearColor(0.1f, 0.1f, 0.1f, 1);
+        Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-
+        
         camera.update();
         batch.setProjectionMatrix(camera.combined);
-        shapeRenderer.setProjectionMatrix(camera.combined);
-
-        // Actualizar jugador y verificar colisión con moneda
-        if (!gameWon) {
-            player.update(Gdx.graphics.getDeltaTime(), platforms);
-            if (checkCoinCollision()) {
-                gameWon = true;
+        
+        player.update(Gdx.graphics.getDeltaTime(), platforms);
+        
+        // Verificar colisiones
+        for(Star star : stars) {
+            if (!star.isCollected() && player.getBounds().overlaps(star.getBounds())) {
+                star.collect();
+                player.collectStar();
             }
-        } else if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
-            resetGame();
         }
-
-        // Renderizar el juego
+        
+        if (!gameWon && player.getBounds().overlaps(book.getBounds()) && player.getStars() >= 5) {
+            gameWon = true;
+        }
+        
+        // Renderizar elementos del juego
         batch.begin();
         for(Platform platform : platforms) {
             platform.render(batch);
         }
-        player.render(batch);
         
-        if (gameWon) {
-            // Centrar y mejorar el mensaje de victoria
-            String message = "¡FELICIDADES, TE TITULASTE!";
-            String subMessage = "Presiona ESPACIO para un nuevo desafío";
-            
-            // Sombra
-            font.setColor(0, 0, 0, 1);
-            layout.setText(font, message);
-            font.draw(batch, message, 
-                     320 - layout.width / 2, 240 + layout.height / 2); // Offset para sombra
-            layout.setText(font, subMessage);
-            font.draw(batch, subMessage, 
-                     320 - layout.width / 2, 180 + layout.height / 2);
-            
-            // Texto principal
-            font.setColor(1, 1, 0, 1); // Amarillo
-            layout.setText(font, message);
-            font.draw(batch, message, 
-                     320 - layout.width / 2, 240);
-            font.setColor(1, 1, 1, 1); // Blanco
-            layout.setText(font, subMessage);
-            font.draw(batch, subMessage, 
-                     320 - layout.width / 2, 180);
+        for(Star star : stars) {
+            if (!star.isCollected()) {
+                star.render(batch);
+            }
         }
-        batch.end();
-
-        // Renderizar moneda si el juego no ha terminado
+        
+        player.render(batch);
         if (!gameWon) {
-            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-            coin.render(shapeRenderer);
-            shapeRenderer.end();
+            book.render(batch);
         }
-    }
-
-    private boolean checkCoinCollision() {
-        return player.getBounds().overlaps(coin.getBounds());
+        
+        // Mostrar textos
+        font.draw(batch, "Estrellas: " + player.getStars(), 10, 470);
+        font.draw(batch, "¡Recolecta todas las estrellas", 400, 470);
+        font.draw(batch, "para poder titularte!", 400, 450);
+        batch.end();
+        
+        // Renderizar mensaje de victoria
+        if (gameWon) {
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+            shapeRenderer.setColor(0, 0, 0, 0.7f);
+            float messageX = 320 - layout.width/2;
+            float messageY = 240;
+            shapeRenderer.rect(messageX - 10, messageY - 30, 
+                             layout.width + 20, 60);
+            shapeRenderer.end();
+            
+            batch.begin();
+            font.getData().setScale(1.2f);
+            String message = "¡FELICIDADES, TE TITULASTE!";
+            font.draw(batch, message, messageX, messageY + 10);
+            font.getData().setScale(1f);
+            batch.end();
+        }
+        
+        if (Gdx.app.getType() == Application.ApplicationType.Android) {
+            renderMobileControls();
+        }
     }
 
     @Override
@@ -181,56 +170,60 @@ public class Main extends ApplicationAdapter {
         font.dispose();
     }
 
-    private void generateRandomMaze() {
-        currentMaze = new int[MAZE_HEIGHT][MAZE_WIDTH];
-        
-        // Llenar bordes
-        for(int i = 0; i < MAZE_HEIGHT; i++) {
-            currentMaze[i][0] = 1;
-            currentMaze[i][MAZE_WIDTH-1] = 1;
-        }
-        for(int j = 0; j < MAZE_WIDTH; j++) {
-            currentMaze[0][j] = 1;
-            currentMaze[MAZE_HEIGHT-1][j] = 1;
-        }
-
-        // Generar paredes aleatorias internas
-        for(int i = 1; i < MAZE_HEIGHT-1; i++) {
-            for(int j = 1; j < MAZE_WIDTH-1; j++) {
-                currentMaze[i][j] = Math.random() < 0.3 ? 1 : 0;
-            }
-        }
-
-        // Asegurar camino desde inicio hasta fin
-        ensurePath(1, 1, MAZE_HEIGHT-2, MAZE_WIDTH-2);
-    }
-
-    private void ensurePath(int startX, int startY, int endX, int endY) {
-        // Crear un camino simple
-        currentMaze[startY][startX] = 0;
-        currentMaze[endY][endX] = 0;
-        
-        // Camino vertical
-        for(int y = Math.min(startY, endY); y <= Math.max(startY, endY); y++) {
-            currentMaze[y][startX] = 0;
-        }
-        // Camino horizontal
-        for(int x = Math.min(startX, endX); x <= Math.max(startX, endX); x++) {
-            currentMaze[endY][x] = 0;
-        }
-    }
-
     private void createMaze() {
         platforms.clear();
-        for(int row = 0; row < currentMaze.length; row++) {
-            for(int col = 0; col < currentMaze[row].length; col++) {
-                if(currentMaze[row][col] == 1) {
-                    platforms.add(new Platform(
-                        col * TILE_SIZE,
-                        (currentMaze.length - 1 - row) * TILE_SIZE
-                    ));
+        
+        // Matriz del laberinto actualizada para coincidir con la imagen
+        int[][] mazeLayout = {
+            {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
+            {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+            {1,0,1,1,1,0,1,0,1,1,1,1,1,0,1},
+            {1,0,0,0,1,0,1,0,0,0,0,0,1,0,1},
+            {1,1,1,0,1,0,1,1,1,1,1,0,1,0,1},
+            {1,0,0,0,1,0,0,0,0,0,1,0,1,0,1},
+            {1,0,1,1,1,1,1,1,1,0,1,0,0,0,1},
+            {1,0,0,0,0,0,0,0,1,0,1,1,1,0,1},
+            {1,0,1,1,1,1,1,0,1,0,0,0,0,0,1},
+            {1,0,0,0,0,0,1,0,1,1,1,1,1,0,1},
+            {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+            {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1}
+        };
+        
+        // Crear las plataformas del laberinto
+        for(int y = 0; y < mazeLayout.length; y++) {
+            for(int x = 0; x < mazeLayout[y].length; x++) {
+                if(mazeLayout[y][x] == 1) {
+                    platforms.add(new Platform(x * TILE_SIZE, (MAZE_HEIGHT - y - 1) * TILE_SIZE));
                 }
             }
+        }
+    }
+
+    private void generateStars() {
+        stars.clear();
+        // Posiciones de estrellas basadas en el valor 2 en la matriz
+        stars.add(new Star(13 * TILE_SIZE + 4, 9 * TILE_SIZE + 4));  // Estrella superior
+        stars.add(new Star(7 * TILE_SIZE + 4, 8 * TILE_SIZE + 4));   // Estrella media alta
+        stars.add(new Star(1 * TILE_SIZE + 4, 6 * TILE_SIZE + 4));   // Estrella media
+        stars.add(new Star(11 * TILE_SIZE + 4, 5 * TILE_SIZE + 4));  // Estrella media baja
+        stars.add(new Star(9 * TILE_SIZE + 4, 3 * TILE_SIZE + 4));   // Estrella inferior
+    }
+
+    private void renderMobileControls() {
+        if (Gdx.app.getType() == Application.ApplicationType.Android) {
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+            shapeRenderer.setColor(0.5f, 0.5f, 0.5f, 0.2f);
+            
+            float screenWidth = Gdx.graphics.getWidth();
+            float screenHeight = Gdx.graphics.getHeight();
+            
+            // Dividir la pantalla en cuatro cuadrantes
+            shapeRenderer.rect(0, 0, screenWidth/2, screenHeight/2); // Abajo-izquierda
+            shapeRenderer.rect(screenWidth/2, 0, screenWidth/2, screenHeight/2); // Abajo-derecha
+            shapeRenderer.rect(0, screenHeight/2, screenWidth/2, screenHeight/2); // Arriba-izquierda
+            shapeRenderer.rect(screenWidth/2, screenHeight/2, screenWidth/2, screenHeight/2); // Arriba-derecha
+            
+            shapeRenderer.end();
         }
     }
 }
